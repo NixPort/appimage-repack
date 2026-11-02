@@ -1,0 +1,26 @@
+# Upstream sources for the repack pipeline.
+#
+# Each recipe says where an AppImage comes from and what it should become.
+# The pipeline downloads the upstream asset, repacks its payload as SquashFS
+# (see scripts/repack.sh for why) and publishes the result as a release asset.
+#
+# Fields:
+#   name        the output stem; the asset is published as <name>-<version>-<arch>.AppImage
+#   repo        GitHub repository to take the release from (owner/name)
+#   version     the upstream release tag to build
+#   asset       the upstream asset name to download
+#   arch        the architecture of that asset: aarch64 or x86_64
+#   sha256      optional; the checksum of the upstream asset, when pinned
+#   title       optional; the human-readable title of the program
+#
+# The sha256 field is what keeps the pipeline honest: the download is
+# verified before anything is unpacked, and a mismatch fails the build rather
+# than producing an image from bytes nobody checked.
+
+- name: ppsspp
+  repo: hrydgard/ppsspp
+  version: v1.20.4
+  asset: PPSSPP-v1.20.4-anylinux-aarch64.AppImage
+  arch: aarch64
+  title: PPSSPP
+  sha256: 18c1d515fd99b0b10ca5fa8cbab192f6d4c9d8a10381e16f5de8fb8f9d39bbe1

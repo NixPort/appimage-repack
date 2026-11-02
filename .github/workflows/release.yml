@@ -1,0 +1,79 @@
+name: repack
+
+# Builds the repacked AppImages and publishes them as release assets.
+#
+# The upstream programs ship AppImages whose payload is DwarFS, which cannot
+# be unpacked on Android (the extraction needs link(2), which the platform
+# denies to apps). The repack turns the payload into SquashFS, which unpacks
+# fine — see scripts/repack.sh.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every day at 04:17 UTC. Upstream releases are not on a schedule, so a
+    # daily poll is what keeps the published assets close to current without
+    # hammering the upstream servers.
+    - cron: "17 4 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        recipe: [ppsspp]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the SquashFS tools
+        run: sudo apt-get update && sudo apt-get install -y squashfs-tools
+
+      - name: Build the repacked image
+        id: build
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          # The script prints "<path> <sha256>" per built asset; the release
+          # step needs both, so hand them over as outputs.
+          mapfile -t lines < <(scripts/build.sh "recipes/${{ matrix.recipe }}.yml" --outdir out)
+          for line in "${lines[@]}"; do
+            path=${line% *}
+            sha=${line##* }
+            echo "path=$path" >> "$GITHUB_OUTPUT"
+            echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Check the result
+        run: |
+          set -euo pipefail
+          ls -la out/
+          # The payload must be a SquashFS the device can unpack, and it must
+          # hold no hard link: creating one is what Android forbids.
+          scripts/check.sh out/*.AppImage
+          file out/*.AppImage
+
+      - name: Publish the release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECIPE: ${{ matrix.recipe }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^[[:space:]]*version:[[:space:]]*//p' "recipes/$RECIPE.yml" | head -1)
+          tag="repack-${RECIPE}-${version}"
+          asset=$(basename "${{ steps.build.outputs.path }}")
+
+          # The tag moves with every upstream version, so replace it when it
+          # is already there.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release delete "$tag" --yes --cleanup-tag
+          fi
+          gh release create "$tag" \
+            --title "${RECIPE} ${version} (repacked)" \
+            --notes "SquashFS repack of the upstream AppImage. Unpacks on Android." \
+            "${{ steps.build.outputs.path }}#$asset"
+
+          echo "sha256  ${{ steps.build.outputs.sha256 }}  $asset" > "${{ steps.build.outputs.path }}.sha256"
+          gh release upload "$tag" "${{ steps.build.outputs.path }}.sha256#${asset}.sha256" --clobber
