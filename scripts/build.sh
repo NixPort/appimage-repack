@@ -29,10 +29,12 @@ source "$HERE/dwarfs_tool.sh"
 DWARFSEXTract=$(fetch_dwarfsextract "$HERE/../.tools")
 
 # Read one field of a recipe. The recipes are flat "key: value" lists, so a
-# plain grep is enough and keeps the pipeline free of a YAML dependency.
+# plain grep is enough and keeps the pipeline free of a YAML dependency. The
+# first entry of a list carries a "- " prefix, so that has to be allowed.
 recipe_field() {
     local file=$1 key=$2
-    sed -n "s/^[[:space:]]*${key}:[[:space:]]*//p" "$file" | head -1 | sed 's/^["'\'']//; s/["'\'']$//'
+    sed -n "s/^[[:space:]]*\(-\{0,1\}[[:space:]]*\)${key}:[[:space:]]*//p" "$file" |
+        head -1 | sed 's/^["'\'']//; s/["'\'']$//'
 }
 
 for recipe in "${RECIPES[@]}"; do
