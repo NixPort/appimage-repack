@@ -24,7 +24,9 @@ fetch_dwarfsextract() {
     local tools=$1
     local dest="$tools/dwarfsextract"
     if [ -x "$dest" ]; then
-        echo "$dest"
+        # An absolute path: the repack runs with a different working
+        # directory, so a relative one would not be found.
+        echo "$(cd "$tools" && pwd)/dwarfsextract"
         return
     fi
     mkdir -p "$tools"

@@ -24,9 +24,14 @@ mkdir -p "$OUTDIR"
 
 # shellcheck source=scripts/dwarfs_tool.sh
 source "$HERE/dwarfs_tool.sh"
-DWARFSEXTract=$(fetch_dwarfsextract "$HERE/../.tools")
 
 log() { printf '[build] %s\n' "$*" >&2; }
+
+DWARFSEXTract=$(fetch_dwarfsextract "$HERE/../.tools")
+# A path that is not executable here would only fail later, inside the
+# repack, with a confusing message.
+[ -x "$DWARFSEXTract" ] || { echo "the DwarFS extractor is not usable: $DWARFSEXTract" >&2; exit 1; }
+log "using the DwarFS extractor at $DWARFSEXTract"
 
 # Read one field of a recipe. The recipes are flat "key: value" lists, so a
 # plain grep is enough and keeps the pipeline free of a YAML dependency. The
