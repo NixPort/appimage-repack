@@ -22,11 +22,11 @@ done
 
 mkdir -p "$OUTDIR"
 
-log() { printf '[build] %s\n' "$*" >&2; }
-
 # shellcheck source=scripts/dwarfs_tool.sh
 source "$HERE/dwarfs_tool.sh"
 DWARFSEXTract=$(fetch_dwarfsextract "$HERE/../.tools")
+
+log() { printf '[build] %s\n' "$*" >&2; }
 
 # Read one field of a recipe. The recipes are flat "key: value" lists, so a
 # plain grep is enough and keeps the pipeline free of a YAML dependency. The

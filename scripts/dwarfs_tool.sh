@@ -12,7 +12,14 @@ DWARFS_VERSION=${DWARFS_VERSION:-0.15.7}
 DWARFS_SHA256=${DWARFS_SHA256:-4dc3b756af88ede837eb3f27fbb5f2f0dbb83d7c9933a1d3be9216d2069d2f5f}
 DWARFS_URL="https://github.com/mhx/dwarfs/releases/download/v${DWARFS_VERSION}/dwarfs-${DWARFS_VERSION}-Linux-x86_64.tar.xz"
 
-# Fetch the extractor into $TOOLS and echo its path.
+# The caller may or may not have a logger; this file is sourced, so it brings
+# its own.
+log() { printf '[dwarfs] %s\n' "$*" >&2; }
+
+# Fetch the extractor into $tools and echo its path.
+#
+# The path goes to stdout and the progress to stderr: the caller captures
+# stdout, so anything else printed there would end up in the path.
 fetch_dwarfsextract() {
     local tools=$1
     local dest="$tools/dwarfsextract"
@@ -21,7 +28,7 @@ fetch_dwarfsextract() {
         return
     fi
     mkdir -p "$tools"
-    log "fetching dwarfsextract v${DWARFS_VERSION}"
+    log "fetching dwarfsextract v${DWARFS_VERSION}" >&2
     curl -sSL -f -o "$tools/dwarfs.tar.xz" "$DWARFS_URL"
     local got
     got=$(sha256sum "$tools/dwarfs.tar.xz" | cut -d' ' -f1)
@@ -41,5 +48,6 @@ fetch_dwarfsextract() {
     chmod +x "$dest"
     rm -f "$tools/dwarfs.tar.xz"
     rm -rf "$tools/dwarfs-${DWARFS_VERSION}-Linux-x86_64"
-    echo "$dest"
+    # An absolute path: the repack runs with a different working directory.
+    echo "$(cd "$tools" && pwd)/dwarfsextract"
 }
