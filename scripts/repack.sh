@@ -26,7 +26,7 @@ OUT=${2:?usage: repack.sh <input> <output>}
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 PAYLOAD_TOOL=${PAYLOAD_TOOL:-"$HERE/appimage_payload.py"}
-DWARFSEXTract=${DWARFSEXTACT:-dwarfsextract}
+DWARFSEXTract=${DWARFSEXTract:-dwarfsextract}
 
 WORK=$(mktemp -d)
 # The unpacked tree keeps the archive's modes, and some directories in it are
@@ -42,6 +42,13 @@ trap cleanup EXIT
 
 log() { printf '[repack] %s\n' "$*" >&2; }
 die() { printf '[repack] error: %s\n' "$*" >&2; exit 1; }
+
+# The tools this script needs, checked before anything is unpacked: a missing
+# tool found halfway through the work leaves a half-built image behind.
+for tool in python3 mksquashfs unsquashfs; do
+    command -v "$tool" >/dev/null || die "$tool is not installed"
+done
+[ -f "$PAYLOAD_TOOL" ] || die "the payload tool is missing: $PAYLOAD_TOOL"
 
 # --- 1. where does the payload start, and what is it? -------------------------
 
@@ -61,6 +68,11 @@ case "$FS_TYPE" in
         ;;
     dwarfs)
         log "extracting the DwarFS payload"
+        # The extractor is only needed for this payload type, so it is
+        # checked here: a wrong path would otherwise fail with the bare
+        # "command not found".
+        [ -x "$DWARFSEXTract" ] ||
+            die "the DwarFS extractor is not usable: $DWARFSEXTract"
         # The extractor wants the output directory to exist: it changes into
         # it before writing anything.
         mkdir -p "$WORK/tree"
