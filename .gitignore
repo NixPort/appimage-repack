@@ -1,3 +1,4 @@
 out/
 .tools/
 *.AppImage
+__pycache__/
