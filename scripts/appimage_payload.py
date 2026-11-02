@@ -53,11 +53,13 @@ def payload_type(f, offset):
     head = f.read(24)
     if head[:4] == SQUASHFS_MAGIC:
         return "squashfs"
-    if head[:5] == DWARFS_MAGIC:
-        if len(head) < 6:
+    if head[:len(DWARFS_MAGIC)] == DWARFS_MAGIC:
+        if len(head) <= len(DWARFS_MAGIC):
             raise ValueError("truncated DwarFS superblock")
-        if head[5] != DWARFS_MAJOR:
-            raise ValueError("unsupported DwarFS major version %d" % head[5])
+        if head[len(DWARFS_MAGIC)] != DWARFS_MAJOR:
+            raise ValueError(
+                "unsupported DwarFS major version %d" % head[len(DWARFS_MAGIC)]
+            )
         return "dwarfs"
     raise ValueError("no known filesystem magic at offset %d" % offset)
 
